@@ -1284,5 +1284,5 @@ public class Body extends NonCopyable implements ConstBody {
     native private static void setUserData(long bodyVa, long value);
 
     // Fork code
-    public static native void getBatchTransforms(long[] bodyIds, int count, java.nio.ByteBuffer buffer);
+    public static native void getBatchTransforms(long bodyInterfaceAddress, long[] bodyIds, int count, java.nio.ByteBuffer buffer);
 }

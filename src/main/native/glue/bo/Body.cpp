@@ -28,6 +28,9 @@ SOFTWARE.
 #include "Jolt/Physics/Body/BodyCreationSettings.h"
 #include "Jolt/Physics/Collision/Shape/SubShapeID.h"
 #include "Jolt/Physics/SoftBody/SoftBodyCreationSettings.h"
+// fork code start
+#include "Jolt/Physics/Body/BodyInterface.h"
+// fork code end
 
 #include "auto/com_github_stephengold_joltjni_Body.h"
 #include "glue/glue.h"
@@ -846,8 +849,8 @@ JNIEXPORT void JNICALL Java_com_github_stephengold_joltjni_Body_setUserData
  * Signature: (JJ)V
  */
 JNIEXPORT void JNICALL Java_com_github_stephengold_joltjni_Body_getBatchTransforms
-  (JNIEnv *env, jclass clazz, jlongArray jBodyIds, jint count, jobject jByteBuffer) {
-    JPH::BodyInterface &bodyInterface = GetPhysicsSystem()->GetBodyInterface();
+  (JNIEnv *env, jclass clazz, jlong jBodyInterfacePtr, jlongArray jBodyIds, jint count, jobject jByteBuffer) {
+    JPH::BodyInterface* bodyInterface = (JPH::BodyInterface*) jBodyInterfacePtr;
 
     float* buffer = (float*)env->GetDirectBufferAddress(jByteBuffer);
     jlong* bodyIds = env->GetLongArrayElements(jBodyIds, NULL);
@@ -858,7 +861,8 @@ JNIEXPORT void JNICALL Java_com_github_stephengold_joltjni_Body_getBatchTransfor
         
         JPH::RVec3 pos;
         JPH::Quat rot;
-        bodyInterface.GetPositionAndRotation(bodyID, pos, rot);
+        
+        bodyInterface->GetPositionAndRotation(bodyID, pos, rot);
 
         buffer[floatIndex++] = (float)pos.GetX();
         buffer[floatIndex++] = (float)pos.GetY();
