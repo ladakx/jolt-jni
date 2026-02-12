@@ -52,44 +52,34 @@ jobs:
           find build -name "libjoltjni.so" -exec cp {} dist/libjolt-jni-linux-x64-dp.so \;
           ./gradlew clean
 
-          ./gradlew -Ptarget=Linux64_fma -Pbt=Release -Pflavor=Sp -PuseVK=yes build -x test -x checkstyleMain --console=plain
-          find build -name "libjoltjni.so" -exec cp {} dist/libjolt-jni-linux-x64-fma-sp.so \;
-          ./gradlew clean
+          #################################################
+          # REMOVE Vulkan for ARM builds
+          #################################################
 
-          ./gradlew -Ptarget=Linux64_fma -Pbt=Release -Pflavor=Dp -PuseVK=yes build -x test -x checkstyleMain --console=plain
-          find build -name "libjoltjni.so" -exec cp {} dist/libjolt-jni-linux-x64-fma-dp.so \;
-          ./gradlew clean
-
+          unset VULKAN_SDK
 
           #################################################
           # ARM64 (Vulkan DISABLED)
           #################################################
 
-          ./gradlew -Ptarget=Linux_ARM64 -Pbt=Release -Pflavor=Sp -PuseVK=no build -x test -x checkstyleMain --console=plain
+          ./gradlew -Ptarget=Linux_ARM64 -Pbt=Release -Pflavor=Sp build -x test -x checkstyleMain --console=plain
           find build -name "libjoltjni.so" -exec cp {} dist/libjolt-jni-linux-arm64-sp.so \;
           ./gradlew clean
 
-          ./gradlew -Ptarget=Linux_ARM64 -Pbt=Release -Pflavor=Dp -PuseVK=no build -x test -x checkstyleMain --console=plain
+          ./gradlew -Ptarget=Linux_ARM64 -Pbt=Release -Pflavor=Dp build -x test -x checkstyleMain --console=plain
           find build -name "libjoltjni.so" -exec cp {} dist/libjolt-jni-linux-arm64-dp.so \;
           ./gradlew clean
 
-
           #################################################
-          # ARM32 (Vulkan DISABLED)
+          # ARM32
           #################################################
 
-          ./gradlew -Ptarget=Linux_ARM32hf -Pbt=Release -Pflavor=Sp -PuseVK=no build -x test -x checkstyleMain --console=plain
+          ./gradlew -Ptarget=Linux_ARM32hf -Pbt=Release -Pflavor=Sp build -x test -x checkstyleMain --console=plain
           find build -name "libjoltjni.so" -exec cp {} dist/libjolt-jni-linux-armhf-sp.so \;
           ./gradlew clean
 
-          ./gradlew -Ptarget=Linux_ARM32hf -Pbt=Release -Pflavor=Dp -PuseVK=no build -x test -x checkstyleMain --console=plain
+          ./gradlew -Ptarget=Linux_ARM32hf -Pbt=Release -Pflavor=Dp build -x test -x checkstyleMain --console=plain
           find build -name "libjoltjni.so" -exec cp {} dist/libjolt-jni-linux-armhf-dp.so \;
-
-      - uses: actions/upload-artifact@v4
-        with:
-          name: linux-files
-          path: dist/*
-
 
   Windows:
     runs-on: windows-2022
