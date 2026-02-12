@@ -1,4 +1,4 @@
-name: Build Jolt JNI Production (No Vulkan)
+name: Build Jolt JNI (Vulkan Fix)
 
 on: [push, workflow_dispatch]
 
@@ -14,53 +14,61 @@ jobs:
         with:
           distribution: 'zulu'
           java-version: 21
+
       - name: Install Cross-Compilers
         run: |
           sudo apt-get update
           sudo apt-get install -y g++-10-aarch64-linux-gnu g++-9-arm-linux-gnueabihf
+      
       - uses: gradle/actions/setup-gradle@v3
-
+      
+      - uses: humbletim/setup-vulkan-sdk@v1.2.1
+        with:
+          vulkan-components: Vulkan-Headers, Vulkan-Loader
+          vulkan-query-version: 1.4.341.1
+          vulkan-use-cache: true
+      
       - name: Build Linux Variants
         run: |
           mkdir -p dist
           
-          # x64 Sp (No Vulkan)
-          ./gradlew -Ptarget=Linux64 -Pbt=Release -Pflavor=Sp -PuseVK=no build -x test -x checkstyleMain --console=plain
+          # --- x64 (Standard) -> VULKAN YES ---
+          ./gradlew -Ptarget=Linux64 -Pbt=Release -Pflavor=Sp -PuseVK=yes build -x test -x checkstyleMain --console=plain
           find build -name "*.so" -exec cp {} dist/libjolt-jni-linux-x64-sp.so \;
           find build/libs -name "jolt-jni-*.jar" ! -name "*-javadoc.jar" ! -name "*-sources.jar" -exec cp {} dist/jolt-jni-universal.jar \;
           ./gradlew clean
 
-          # x64 Dp (No Vulkan)
-          ./gradlew -Ptarget=Linux64 -Pbt=Release -Pflavor=Dp -PuseVK=no build -x test -x checkstyleMain --console=plain
+          # --- x64 (Dp) -> VULKAN YES ---
+          ./gradlew -Ptarget=Linux64 -Pbt=Release -Pflavor=Dp -PuseVK=yes build -x test -x checkstyleMain --console=plain
           find build -name "*.so" -exec cp {} dist/libjolt-jni-linux-x64-dp.so \;
           ./gradlew clean
 
-          # FMA Sp (No Vulkan)
-          ./gradlew -Ptarget=Linux64_fma -Pbt=Release -Pflavor=Sp -PuseVK=no build -x test -x checkstyleMain --console=plain
+          # --- x64 (FMA) -> VULKAN YES ---
+          ./gradlew -Ptarget=Linux64_fma -Pbt=Release -Pflavor=Sp -PuseVK=yes build -x test -x checkstyleMain --console=plain
           find build -name "*.so" -exec cp {} dist/libjolt-jni-linux-x64-fma-sp.so \;
           ./gradlew clean
 
-          # FMA Dp (No Vulkan)
-          ./gradlew -Ptarget=Linux64_fma -Pbt=Release -Pflavor=Dp -PuseVK=no build -x test -x checkstyleMain --console=plain
+          # --- x64 (FMA Dp) -> VULKAN YES ---
+          ./gradlew -Ptarget=Linux64_fma -Pbt=Release -Pflavor=Dp -PuseVK=yes build -x test -x checkstyleMain --console=plain
           find build -name "*.so" -exec cp {} dist/libjolt-jni-linux-x64-fma-dp.so \;
           ./gradlew clean
 
-          # ARM64 Sp
+          # --- ARM64 -> VULKAN NO ---
           ./gradlew -Ptarget=Linux_ARM64 -Pbt=Release -Pflavor=Sp -PuseVK=no build -x test -x checkstyleMain --console=plain
           find build -name "*.so" -exec cp {} dist/libjolt-jni-linux-arm64-sp.so \;
           ./gradlew clean
 
-          # ARM64 Dp
+          # --- ARM64 Dp -> VULKAN NO ---
           ./gradlew -Ptarget=Linux_ARM64 -Pbt=Release -Pflavor=Dp -PuseVK=no build -x test -x checkstyleMain --console=plain
           find build -name "*.so" -exec cp {} dist/libjolt-jni-linux-arm64-dp.so \;
           ./gradlew clean
 
-          # ARM32 Sp
+          # --- ARM32 -> VULKAN NO ---
           ./gradlew -Ptarget=Linux_ARM32hf -Pbt=Release -Pflavor=Sp -PuseVK=no build -x test -x checkstyleMain --console=plain
           find build -name "*.so" -exec cp {} dist/libjolt-jni-linux-armhf-sp.so \;
           ./gradlew clean
 
-          # ARM32 Dp
+          # --- ARM32 Dp -> VULKAN NO ---
           ./gradlew -Ptarget=Linux_ARM32hf -Pbt=Release -Pflavor=Dp -PuseVK=no build -x test -x checkstyleMain --console=plain
           find build -name "*.so" -exec cp {} dist/libjolt-jni-linux-armhf-dp.so \;
 
@@ -78,30 +86,36 @@ jobs:
           distribution: 'zulu'
           java-version: 21
       - uses: gradle/actions/setup-gradle@v3
-      # Vulkan прибрано
+      
+      # VULKAN FOR WINDOWS
+      - uses: humbletim/setup-vulkan-sdk@v1.2.1
+        with:
+          vulkan-components: Vulkan-Headers, Vulkan-Loader
+          vulkan-query-version: 1.4.341.1
+          vulkan-use-cache: true
 
       - name: Build Windows Variants
         shell: bash
         run: |
           mkdir -p dist
           
-          # x64 Sp (No Vulkan)
-          ./gradlew -Ptarget=Windows64 -Pbt=Release -Pflavor=Sp -PuseVK=no build -x test -x checkstyleMain --console=plain
+          # x64 Sp -> VULKAN YES
+          ./gradlew -Ptarget=Windows64 -Pbt=Release -Pflavor=Sp -PuseVK=yes build -x test -x checkstyleMain --console=plain
           find build -name "*.dll" -exec cp {} dist/jolt-jni-windows-x64-sp.dll \;
           ./gradlew clean
 
-          # x64 Dp (No Vulkan)
-          ./gradlew -Ptarget=Windows64 -Pbt=Release -Pflavor=Dp -PuseVK=no build -x test -x checkstyleMain --console=plain
+          # x64 Dp -> VULKAN YES
+          ./gradlew -Ptarget=Windows64 -Pbt=Release -Pflavor=Dp -PuseVK=yes build -x test -x checkstyleMain --console=plain
           find build -name "*.dll" -exec cp {} dist/jolt-jni-windows-x64-dp.dll \;
           ./gradlew clean
 
-          # AVX2 Sp (No Vulkan)
-          ./gradlew -Ptarget=Windows64_avx2 -Pbt=Release -Pflavor=Sp -PuseVK=no build -x test -x checkstyleMain --console=plain
+          # AVX2 Sp -> VULKAN YES
+          ./gradlew -Ptarget=Windows64_avx2 -Pbt=Release -Pflavor=Sp -PuseVK=yes build -x test -x checkstyleMain --console=plain
           find build -name "*.dll" -exec cp {} dist/jolt-jni-windows-avx2-sp.dll \;
           ./gradlew clean
 
-          # AVX2 Dp (No Vulkan)
-          ./gradlew -Ptarget=Windows64_avx2 -Pbt=Release -Pflavor=Dp -PuseVK=no build -x test -x checkstyleMain --console=plain
+          # AVX2 Dp -> VULKAN YES
+          ./gradlew -Ptarget=Windows64_avx2 -Pbt=Release -Pflavor=Dp -PuseVK=yes build -x test -x checkstyleMain --console=plain
           find build -name "*.dll" -exec cp {} dist/jolt-jni-windows-avx2-dp.dll \;
 
       - uses: actions/upload-artifact@v4
@@ -122,6 +136,8 @@ jobs:
       - name: Build MacOS Variants
         run: |
           mkdir -p dist
+          
+          # MacOS зазвичай не використовує Vulkan SDK напряму в цьому білді, тому без змін
           
           # ARM64 Sp
           ./gradlew -Ptarget=MacOSX_ARM64 -Pbt=Release -Pflavor=Sp build -x test -x checkstyleMain --console=plain
@@ -167,7 +183,7 @@ jobs:
       - name: Upload to Release
         uses: softprops/action-gh-release@v1
         with:
-          name: Latest Jolt-JNI Production Build
+          name: Latest Jolt-JNI Build
           tag_name: nightly
           prerelease: true
           files: all_files/*
