@@ -1,4 +1,4 @@
-name: Build & Publish Release
+name: Build All Variants (Sp/Dp, Debug/Release)
 
 on: [push, workflow_dispatch]
 
@@ -7,7 +7,7 @@ permissions:
 
 jobs:
   # ==========================================
-  # 1. LINUX BUILD (Tests Skipped)
+  # 1. LINUX BUILD
   # ==========================================
   Linux:
     runs-on: ubuntu-22.04
@@ -24,22 +24,32 @@ jobs:
           vulkan-query-version: 1.4.341.1
           vulkan-use-cache: true
       
-      - name: Build & Collect
+      - name: Build & Collect Linux
         run: |
           mkdir -p dist
           
-          # --- DEBUG ---
-          ./gradlew -Ptarget=Linux64 -Pbt=Debug -PuseVK=yes build -x test -x checkstyleMain -x checkstyleTest --console=plain
+          # --- Single Precision (Sp) ---
+          # Debug
+          ./gradlew -Ptarget=Linux64 -Pbt=Debug -Pflavor=Sp -PuseVK=yes build -x test -x checkstyleMain --console=plain
+          find build -name "*.so" -exec cp {} dist/libjolt-jni-linux-sp-debug.so \;
+          # Release
+          ./gradlew -Ptarget=Linux64 -Pbt=Release -Pflavor=Sp -PuseVK=yes build -x test -x checkstyleMain --console=plain
+          find build -name "*.so" -exec cp {} dist/libjolt-jni-linux-sp-release.so \;
+          
+          find build/libs -name "jolt-jni-*.jar" ! -name "*-javadoc.jar" ! -name "*-sources.jar" -exec cp {} dist/jolt-jni-linux-sp.jar \;
 
-          find build/libs -name "jolt-jni-*.jar" ! -name "*-javadoc.jar" ! -name "*-sources.jar" -exec cp {} dist/jolt-jni-linux-debug.jar \;
-          find build -name "*.so" -exec cp {} dist/libjolt-jni-linux-debug.so \;
-          
-          # --- RELEASE ---
+          # --- Clean before Double Precision ---
           ./gradlew clean
-          ./gradlew -Ptarget=Linux64 -Pbt=Release -PuseVK=yes build -x test -x checkstyleMain -x checkstyleTest --console=plain
-          
-          find build/libs -name "jolt-jni-*.jar" ! -name "*-javadoc.jar" ! -name "*-sources.jar" -exec cp {} dist/jolt-jni-linux-release.jar \;
-          find build -name "*.so" -exec cp {} dist/libjolt-jni-linux-release.so \;
+
+          # --- Double Precision (Dp) ---
+          # Debug
+          ./gradlew -Ptarget=Linux64 -Pbt=Debug -Pflavor=Dp -PuseVK=yes build -x test -x checkstyleMain --console=plain
+          find build -name "*.so" -exec cp {} dist/libjolt-jni-linux-dp-debug.so \;
+          # Release
+          ./gradlew -Ptarget=Linux64 -Pbt=Release -Pflavor=Dp -PuseVK=yes build -x test -x checkstyleMain --console=plain
+          find build -name "*.so" -exec cp {} dist/libjolt-jni-linux-dp-release.so \;
+          # Jar Dp
+          find build/libs -name "jolt-jni-*.jar" ! -name "*-javadoc.jar" ! -name "*-sources.jar" -exec cp {} dist/jolt-jni-linux-dp.jar \;
 
       - uses: actions/upload-artifact@v4
         with:
@@ -47,7 +57,7 @@ jobs:
           path: dist/*
 
   # ==========================================
-  # 2. WINDOWS BUILD (Tests Skipped)
+  # 2. WINDOWS BUILD
   # ==========================================
   Windows:
     runs-on: windows-2022
@@ -64,23 +74,28 @@ jobs:
           vulkan-query-version: 1.4.341.1
           vulkan-use-cache: true
 
-      - name: Build & Collect
+      - name: Build & Collect Windows
         shell: bash
         run: |
           mkdir -p dist
           
-          # --- DEBUG ---
-          ./gradlew -Ptarget=Windows64 -Pbt=Debug -PuseVK=yes build -x test -x checkstyleMain -x checkstyleTest --console=plain
+          # --- Single Precision (Sp) ---
+          ./gradlew -Ptarget=Windows64 -Pbt=Debug -Pflavor=Sp -PuseVK=yes build -x test -x checkstyleMain --console=plain
+          find build -name "*.dll" -exec cp {} dist/jolt-jni-windows-sp-debug.dll \;
           
-          find build/libs -name "jolt-jni-*.jar" ! -name "*-javadoc.jar" ! -name "*-sources.jar" -exec cp {} dist/jolt-jni-windows-debug.jar \;
-          find build -name "*.dll" -exec cp {} dist/jolt-jni-windows-debug.dll \;
-          
-          # --- RELEASE ---
+          ./gradlew -Ptarget=Windows64 -Pbt=Release -Pflavor=Sp -PuseVK=yes build -x test -x checkstyleMain --console=plain
+          find build -name "*.dll" -exec cp {} dist/jolt-jni-windows-sp-release.dll \;
+          find build/libs -name "jolt-jni-*.jar" ! -name "*-javadoc.jar" ! -name "*-sources.jar" -exec cp {} dist/jolt-jni-windows-sp.jar \;
+
           ./gradlew clean
-          ./gradlew -Ptarget=Windows64 -Pbt=Release -PuseVK=yes build -x test -x checkstyleMain -x checkstyleTest --console=plain
+
+          # --- Double Precision (Dp) ---
+          ./gradlew -Ptarget=Windows64 -Pbt=Debug -Pflavor=Dp -PuseVK=yes build -x test -x checkstyleMain --console=plain
+          find build -name "*.dll" -exec cp {} dist/jolt-jni-windows-dp-debug.dll \;
           
-          find build/libs -name "jolt-jni-*.jar" ! -name "*-javadoc.jar" ! -name "*-sources.jar" -exec cp {} dist/jolt-jni-windows-release.jar \;
-          find build -name "*.dll" -exec cp {} dist/jolt-jni-windows-release.dll \;
+          ./gradlew -Ptarget=Windows64 -Pbt=Release -Pflavor=Dp -PuseVK=yes build -x test -x checkstyleMain --console=plain
+          find build -name "*.dll" -exec cp {} dist/jolt-jni-windows-dp-release.dll \;
+          find build/libs -name "jolt-jni-*.jar" ! -name "*-javadoc.jar" ! -name "*-sources.jar" -exec cp {} dist/jolt-jni-windows-dp.jar \;
 
       - uses: actions/upload-artifact@v4
         with:
@@ -88,7 +103,7 @@ jobs:
           path: dist/*
 
   # ==========================================
-  # 3. MACOS BUILD (Tests Skipped + Fixes)
+  # 3. MACOS BUILD
   # ==========================================
   MacOS:
     runs-on: macos-latest
@@ -100,22 +115,30 @@ jobs:
           java-version: 21
       - uses: gradle/actions/setup-gradle@v3
 
-      - name: Build & Collect
+      - name: Build & Collect MacOS
         run: |
           mkdir -p dist
           
-          # --- ARM64 ---
-          ./gradlew -Ptarget=MacOSX_ARM64 -Pbt=Release build -x test -x checkstyleMain -x checkstyleTest --console=plain
+          # --- ARM64 (M1/M2) - SP ---
+          ./gradlew -Ptarget=MacOSX_ARM64 -Pbt=Release -Pflavor=Sp build -x test -x checkstyleMain --console=plain
+          find build -name "*.dylib" -exec cp {} dist/libjolt-jni-macos-arm64-sp.dylib \;
+          find build/libs -name "jolt-jni-*.jar" ! -name "*-javadoc.jar" ! -name "*-sources.jar" -exec cp {} dist/jolt-jni-macos-arm64-sp.jar \;
           
-          find build/libs -name "jolt-jni-*.jar" ! -name "*-javadoc.jar" ! -name "*-sources.jar" -exec cp {} dist/jolt-jni-macos-arm64.jar \;
-          find build -name "*.dylib" -exec cp {} dist/libjolt-jni-macos-arm64.dylib \;
-          
-          # --- INTEL x64 ---
+          # --- ARM64 (M1/M2) - DP ---
           ./gradlew clean
-          ./gradlew -Ptarget=MacOSX64 -Pbt=Release build -x test -x checkstyleMain -x checkstyleTest --console=plain
+          ./gradlew -Ptarget=MacOSX_ARM64 -Pbt=Release -Pflavor=Dp build -x test -x checkstyleMain --console=plain
+          find build -name "*.dylib" -exec cp {} dist/libjolt-jni-macos-arm64-dp.dylib \;
+          find build/libs -name "jolt-jni-*.jar" ! -name "*-javadoc.jar" ! -name "*-sources.jar" -exec cp {} dist/jolt-jni-macos-arm64-dp.jar \;
+
+          # --- INTEL (x64) - SP ---
+          ./gradlew clean
+          ./gradlew -Ptarget=MacOSX64 -Pbt=Release -Pflavor=Sp build -x test -x checkstyleMain --console=plain
+          find build -name "*.dylib" -exec cp {} dist/libjolt-jni-macos-intel-sp.dylib \;
           
-          find build/libs -name "jolt-jni-*.jar" ! -name "*-javadoc.jar" ! -name "*-sources.jar" -exec cp {} dist/jolt-jni-macos-intel.jar \;
-          find build -name "*.dylib" -exec cp {} dist/libjolt-jni-macos-intel.dylib \;
+          # --- INTEL (x64) - DP ---
+          ./gradlew clean
+          ./gradlew -Ptarget=MacOSX64 -Pbt=Release -Pflavor=Dp build -x test -x checkstyleMain --console=plain
+          find build -name "*.dylib" -exec cp {} dist/libjolt-jni-macos-intel-dp.dylib \;
 
       - uses: actions/upload-artifact@v4
         with:
