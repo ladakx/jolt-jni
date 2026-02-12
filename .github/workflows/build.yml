@@ -176,7 +176,7 @@ jobs:
 
       - name: Locate and Rename Artifact
         run: |
-          # На Windows шукаємо joltjni.dll (без дефіса)
+          # На Windows ім'я зазвичай joltjni.dll (без lib на початку і без дефіса)
           LIB_PATH=$(find build -name "joltjni.dll" | head -n 1)
           
           if [ -z "$LIB_PATH" ]; then
@@ -194,31 +194,34 @@ jobs:
 
   # --- 5. macOS ---
   build-macos:
-    runs-on: ${{ matrix.os }}
+    # Використовуємо macos-15 (Apple Silicon) для ВСІХ збірок.
+    # Intel версія буде зібрана через Rosetta 2 або крос-компіляцію.
+    runs-on: macos-15
     strategy:
       fail-fast: false
       matrix:
         include:
-          # Intel Mac: Змінено на macos-13 (стандартний Intel runner)
+          # Intel Mac
           - target: MacOSX64
             flavor: Sp
-            os: macos-13
+            java_arch: x64     # Примусово емулюємо Intel середовище
           - target: MacOSX64
             flavor: Dp
-            os: macos-13
-          # Apple Silicon Mac: macos-15 (стандартний ARM runner)
+            java_arch: x64
+          # Apple Silicon Mac
           - target: MacOSX_ARM64
             flavor: Sp
-            os: macos-15
+            java_arch: aarch64 # Рідна архітектура
           - target: MacOSX_ARM64
             flavor: Dp
-            os: macos-15
+            java_arch: aarch64
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
         with:
           distribution: 'zulu'
           java-version: 21
+          architecture: ${{ matrix.java_arch }} # Важливо для правильного режиму роботи
       - uses: gradle/actions/setup-gradle@v3
       
       - name: Build Native Lib (Install)
@@ -228,7 +231,7 @@ jobs:
 
       - name: Locate and Rename Artifact
         run: |
-          # На Mac шукаємо libjoltjni.dylib (без дефіса)
+          # На Mac ім'я зазвичай libjoltjni.dylib (без дефіса)
           LIB_PATH=$(find build -name "libjoltjni.dylib" | head -n 1)
           
           if [ -z "$LIB_PATH" ]; then
