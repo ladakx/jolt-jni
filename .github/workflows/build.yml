@@ -1,10 +1,15 @@
-name: Build Jolt JNI
+name: Build & Publish Release
 
 on: [push, workflow_dispatch]
 
+permissions:
+  contents: write
+
 jobs:
-  # --- LINUX (x64) ---
-  Linux64:
+  # ==========================================
+  # 1. LINUX BUILD
+  # ==========================================
+  Linux:
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
@@ -19,17 +24,28 @@ jobs:
           vulkan-query-version: 1.4.341.1
           vulkan-use-cache: true
       
-      - name: Build Linux
-        run: ./gradlew -Ptarget=Linux64 -PuseVK=yes build -x checkstyleMain -x checkstyleTest --console=plain
+      - name: Build & Collect
+        run: |
+          mkdir -p dist
+          # Debug
+          ./gradlew -Ptarget=Linux64 -Pbt=Debug -PuseVK=yes build -x checkstyleMain -x checkstyleTest --console=plain
+          cp build/libs/*.jar dist/jolt-jni-linux-debug.jar
+          find build -name "*.so" -exec cp {} dist/libjolt-jni-linux-debug.so \;
+          # Release
+          ./gradlew clean
+          ./gradlew -Ptarget=Linux64 -Pbt=Release -PuseVK=yes build -x checkstyleMain -x checkstyleTest --console=plain
+          cp build/libs/*.jar dist/jolt-jni-linux-release.jar
+          find build -name "*.so" -exec cp {} dist/libjolt-jni-linux-release.so \;
 
-      - name: Upload Linux Artifacts
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         with:
-          name: jolt-jni-linux
-          path: build/libs/*.jar
+          name: linux-files
+          path: dist/*
 
-  # --- WINDOWS (x64) ---
-  Windows64:
+  # ==========================================
+  # 2. WINDOWS BUILD
+  # ==========================================
+  Windows:
     runs-on: windows-2022
     steps:
       - uses: actions/checkout@v4
@@ -44,20 +60,29 @@ jobs:
           vulkan-query-version: 1.4.341.1
           vulkan-use-cache: true
 
-      - name: Build Windows
+      - name: Build & Collect
         shell: bash
-        run: ./gradlew -Ptarget=Windows64 -PuseVK=yes build -x checkstyleMain -x checkstyleTest --console=plain
+        run: |
+          mkdir -p dist
+          # Debug
+          ./gradlew -Ptarget=Windows64 -Pbt=Debug -PuseVK=yes build -x checkstyleMain -x checkstyleTest --console=plain
+          cp build/libs/*.jar dist/jolt-jni-windows-debug.jar
+          find build -name "*.dll" -exec cp {} dist/jolt-jni-windows-debug.dll \;
+          # Release
+          ./gradlew clean
+          ./gradlew -Ptarget=Windows64 -Pbt=Release -PuseVK=yes build -x checkstyleMain -x checkstyleTest --console=plain
+          cp build/libs/*.jar dist/jolt-jni-windows-release.jar
+          find build -name "*.dll" -exec cp {} dist/jolt-jni-windows-release.dll \;
 
-      - name: Upload Windows Artifacts
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         with:
-          name: jolt-jni-windows
-          path: |
-            build/libs/*.jar
-            build/**/*.dll
+          name: windows-files
+          path: dist/*
 
-  # --- MACOS (Universal: Intel + ARM) ---
-  MacOS_Universal:
+  # ==========================================
+  # 3. MACOS BUILD
+  # ==========================================
+  MacOS:
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
@@ -67,23 +92,50 @@ jobs:
           java-version: 21
       - uses: gradle/actions/setup-gradle@v3
 
-      - name: Build macOS ARM64
-        run: ./gradlew -Ptarget=MacOSX_ARM64 build -x checkstyleMain -x checkstyleTest --console=plain
-      
-      - name: Rename ARM jar
-        run: mv build/libs/jolt-jni-*.jar build/libs/jolt-jni-macos-arm64.jar
+      - name: Build & Collect
+        run: |
+          mkdir -p dist
+          # ARM64
+          ./gradlew -Ptarget=MacOSX_ARM64 -Pbt=Release build -x checkstyleMain -x checkstyleTest --console=plain
+          cp build/libs/*.jar dist/jolt-jni-macos-arm64.jar
+          find build -name "*.dylib" -exec cp {} dist/libjolt-jni-macos-arm64.dylib \;
+          # Intel
+          ./gradlew clean
+          ./gradlew -Ptarget=MacOSX64 -Pbt=Release build -x checkstyleMain -x checkstyleTest --console=plain
+          cp build/libs/*.jar dist/jolt-jni-macos-intel.jar
+          find build -name "*.dylib" -exec cp {} dist/libjolt-jni-macos-intel.dylib \;
 
-      - name: Build macOS Intel
-        run: ./gradlew -Ptarget=MacOSX64 clean build -x checkstyleMain -x checkstyleTest --console=plain
-
-      - name: Rename Intel jar
-        run: mv build/libs/jolt-jni-*.jar build/libs/jolt-jni-macos-intel.jar
-
-      - name: Upload Mac Artifacts
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         with:
-          name: jolt-jni-macos-universal
-          path: |
-            build/libs/jolt-jni-macos-arm64.jar
-            build/libs/jolt-jni-macos-intel.jar
-            build/**/*.dylib
+          name: macos-files
+          path: dist/*
+
+  # ==========================================
+  # 4. PUBLISH TO RELEASES (THE MAGIC PART)
+  # ==========================================
+  Publish:
+    needs: [Linux, Windows, MacOS]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: "*-files"
+          path: all_files
+          merge-multiple: true
+
+      - uses: dev-drprasad/delete-tag-and-release@v1.0
+        with:
+          delete_release: true
+          tag_name: nightly
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload to Release
+        uses: softprops/action-gh-release@v1
+        with:
+          name: Latest Nightly Build
+          tag_name: nightly
+          prerelease: true
+          files: all_files/*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
