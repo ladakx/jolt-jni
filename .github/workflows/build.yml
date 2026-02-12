@@ -6,10 +6,10 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write # Потрібно для створення релізів
+  contents: write
 
 jobs:
-  # --- 1. Збірка чистого JAR (Java API) ---
+  # --- 1. Java JAR ---
   build-java-jar:
     runs-on: ubuntu-22.04
     steps:
@@ -28,7 +28,7 @@ jobs:
           name: jolt-jni-api-jar
           path: jolt-jni-api.jar
 
-  # --- 2. Linux PC (x64, x64_fma) ---
+  # --- 2. Linux PC ---
   build-linux-pc:
     runs-on: ubuntu-22.04
     strategy:
@@ -48,22 +48,35 @@ jobs:
           vulkan-components: Vulkan-Headers, Vulkan-Loader
           vulkan-query-version: 1.4.341.1
           vulkan-use-cache: true
-      - name: Build Native Lib
+      
+      - name: Build Native Lib (Install)
         run: |
           ./gradlew -Pbt=Release -Pflavor=${{ matrix.flavor }} -Ptarget=${{ matrix.target }} -PuseVK=yes \
-            -x checkstyleMain -x checkstyleTest -x test -x javadoc assemble --console=plain
-      - name: Rename Artifact
+            -x checkstyleMain -x checkstyleTest -x test -x javadoc install --console=plain
+
+      - name: Locate and Rename Artifact
         run: |
-          LIB_PATH=$(find . -name "libjolt-jni.so" | head -n 1)
+          echo "Listing build directory for debugging:"
+          ls -R build/
+          
+          # Шукаємо .so файл. Зазвичай install кладе його в build/install/.../lib/
+          LIB_PATH=$(find build -name "libjolt-jni.so" | head -n 1)
+          
+          if [ -z "$LIB_PATH" ]; then
+            echo "Error: libjolt-jni.so not found!"
+            exit 1
+          fi
+          
+          echo "Found library at: $LIB_PATH"
           mv "$LIB_PATH" "libjolt-jni-${{ matrix.target }}-${{ matrix.flavor }}.so"
+
       - uses: actions/upload-artifact@v4
         with:
           name: libs-linux-pc-${{ matrix.target }}-${{ matrix.flavor }}
           path: "*.so"
 
-  # --- 3. Linux Cross-Compile (ARM, LoongArch) ---
+  # --- 3. Linux Cross ---
   build-linux-cross:
-    # Виправлено: runs-on тепер береться виключно з матриці
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -111,20 +124,30 @@ jobs:
           distribution: 'zulu'
           java-version: 21
       - uses: gradle/actions/setup-gradle@v3
-      - name: Build Native Lib
+      
+      - name: Build Native Lib (Install)
         run: |
           ./gradlew -Pbt=Release -Pflavor=${{ matrix.flavor }} -Ptarget=${{ matrix.target }} \
-            -x checkstyleMain -x checkstyleTest -x test -x javadoc assemble --console=plain
-      - name: Rename Artifact
+            -x checkstyleMain -x checkstyleTest -x test -x javadoc install --console=plain
+
+      - name: Locate and Rename Artifact
         run: |
-          LIB_PATH=$(find . -name "libjolt-jni.so" | head -n 1)
+          ls -R build/
+          LIB_PATH=$(find build -name "libjolt-jni.so" | head -n 1)
+          
+          if [ -z "$LIB_PATH" ]; then
+            echo "Error: libjolt-jni.so not found!"
+            exit 1
+          fi
+          
           mv "$LIB_PATH" "libjolt-jni-${{ matrix.target }}-${{ matrix.flavor }}.so"
+
       - uses: actions/upload-artifact@v4
         with:
           name: libs-linux-cross-${{ matrix.target }}-${{ matrix.flavor }}
           path: "*.so"
 
-  # --- 4. Windows (x64, AVX2) ---
+  # --- 4. Windows ---
   build-windows:
     runs-on: windows-2022
     defaults:
@@ -147,40 +170,51 @@ jobs:
           vulkan-components: Vulkan-Headers, Vulkan-Loader
           vulkan-query-version: 1.4.341.1
           vulkan-use-cache: true
-      - name: Build Native Lib
+      
+      - name: Build Native Lib (Install)
         run: |
           ./gradlew -Pbt=Release -Pflavor=${{ matrix.flavor }} -Ptarget=${{ matrix.target }} -PuseVK=yes \
-            -x checkstyleMain -x checkstyleTest -x test -x javadoc assemble --console=plain
-      - name: Rename Artifact
+            -x checkstyleMain -x checkstyleTest -x test -x javadoc install --console=plain
+
+      - name: Locate and Rename Artifact
         run: |
-          LIB_PATH=$(find . -name "jolt-jni.dll" | head -n 1)
+          ls -R build/
+          # На Windows шукаємо DLL
+          LIB_PATH=$(find build -name "jolt-jni.dll" | head -n 1)
+          
+          if [ -z "$LIB_PATH" ]; then
+            echo "Error: jolt-jni.dll not found!"
+            exit 1
+          fi
+          
           mv "$LIB_PATH" "jolt-jni-${{ matrix.target }}-${{ matrix.flavor }}.dll"
+
       - uses: actions/upload-artifact@v4
         with:
           name: libs-windows-${{ matrix.target }}-${{ matrix.flavor }}
           path: "*.dll"
 
-  # --- 5. macOS (x64, ARM64) ---
+  # --- 5. macOS ---
   build-macos:
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
         include:
-          # Intel Mac
+          # Intel Mac (Використовуємо macos-12, бо macos-13 інколи недоступний)
           - target: MacOSX64
             flavor: Sp
-            os: macos-13 # macos-13 is Intel on GitHub Actions
+            os: macos-12
           - target: MacOSX64
             flavor: Dp
-            os: macos-13
-          # Apple Silicon Mac
+            os: macos-12
+          # Apple Silicon Mac (ARM)
           - target: MacOSX_ARM64
             flavor: Sp
-            os: macos-15 # macos-14/15 is ARM on GitHub Actions
+            os: macos-14
           - target: MacOSX_ARM64
             flavor: Dp
-            os: macos-15
+            os: macos-14
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
@@ -188,20 +222,31 @@ jobs:
           distribution: 'zulu'
           java-version: 21
       - uses: gradle/actions/setup-gradle@v3
-      - name: Build Native Lib
+      
+      - name: Build Native Lib (Install)
         run: |
           ./gradlew -Pbt=Release -Pflavor=${{ matrix.flavor }} -Ptarget=${{ matrix.target }} \
-            -x checkstyleMain -x checkstyleTest -x test -x javadoc assemble --console=plain
-      - name: Rename Artifact
+            -x checkstyleMain -x checkstyleTest -x test -x javadoc install --console=plain
+
+      - name: Locate and Rename Artifact
         run: |
-          LIB_PATH=$(find . -name "libjolt-jni.dylib" | head -n 1)
+          ls -R build/
+          # На Mac шукаємо dylib
+          LIB_PATH=$(find build -name "libjolt-jni.dylib" | head -n 1)
+          
+          if [ -z "$LIB_PATH" ]; then
+            echo "Error: libjolt-jni.dylib not found!"
+            exit 1
+          fi
+
           mv "$LIB_PATH" "libjolt-jni-${{ matrix.target }}-${{ matrix.flavor }}.dylib"
+
       - uses: actions/upload-artifact@v4
         with:
           name: libs-macos-${{ matrix.target }}-${{ matrix.flavor }}
           path: "*.dylib"
 
-  # --- 6. Публікація Nightly Release ---
+  # --- 6. Release ---
   nightly-release:
     needs: [build-java-jar, build-linux-pc, build-linux-cross, build-windows, build-macos]
     runs-on: ubuntu-latest
@@ -211,7 +256,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           path: artifacts
-          merge-multiple: true # Це розпакує всі унікальні файли в одну папку
+          merge-multiple: true
 
       - name: Display Artifacts
         run: ls -R artifacts
