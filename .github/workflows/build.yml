@@ -1,4 +1,4 @@
-name: Build Jolt JNI (Vulkan Fix)
+name: Build Jolt JNI (Fixed ARM)
 
 on: [push, workflow_dispatch]
 
@@ -14,7 +14,7 @@ jobs:
         with:
           distribution: 'zulu'
           java-version: 21
-
+      
       - name: Install Cross-Compilers
         run: |
           sudo apt-get update
@@ -38,37 +38,38 @@ jobs:
           find build/libs -name "jolt-jni-*.jar" ! -name "*-javadoc.jar" ! -name "*-sources.jar" -exec cp {} dist/jolt-jni-universal.jar \;
           ./gradlew clean
 
-          # --- x64 (Dp) -> VULKAN YES ---
+          # --- x64 (Dp) ---
           ./gradlew -Ptarget=Linux64 -Pbt=Release -Pflavor=Dp -PuseVK=yes build -x test -x checkstyleMain --console=plain
           find build -name "*.so" -exec cp {} dist/libjolt-jni-linux-x64-dp.so \;
           ./gradlew clean
 
-          # --- x64 (FMA) -> VULKAN YES ---
+          # --- x64 (FMA) ---
           ./gradlew -Ptarget=Linux64_fma -Pbt=Release -Pflavor=Sp -PuseVK=yes build -x test -x checkstyleMain --console=plain
           find build -name "*.so" -exec cp {} dist/libjolt-jni-linux-x64-fma-sp.so \;
           ./gradlew clean
 
-          # --- x64 (FMA Dp) -> VULKAN YES ---
           ./gradlew -Ptarget=Linux64_fma -Pbt=Release -Pflavor=Dp -PuseVK=yes build -x test -x checkstyleMain --console=plain
           find build -name "*.so" -exec cp {} dist/libjolt-jni-linux-x64-fma-dp.so \;
           ./gradlew clean
 
-          # --- ARM64 -> VULKAN NO ---
+          export CXXFLAGS="-I$VULKAN_SDK/include"
+
+          # --- ARM64 Sp ---
           ./gradlew -Ptarget=Linux_ARM64 -Pbt=Release -Pflavor=Sp -PuseVK=no build -x test -x checkstyleMain --console=plain
           find build -name "*.so" -exec cp {} dist/libjolt-jni-linux-arm64-sp.so \;
           ./gradlew clean
 
-          # --- ARM64 Dp -> VULKAN NO ---
+          # --- ARM64 Dp ---
           ./gradlew -Ptarget=Linux_ARM64 -Pbt=Release -Pflavor=Dp -PuseVK=no build -x test -x checkstyleMain --console=plain
           find build -name "*.so" -exec cp {} dist/libjolt-jni-linux-arm64-dp.so \;
           ./gradlew clean
 
-          # --- ARM32 -> VULKAN NO ---
+          # --- ARM32 Sp ---
           ./gradlew -Ptarget=Linux_ARM32hf -Pbt=Release -Pflavor=Sp -PuseVK=no build -x test -x checkstyleMain --console=plain
           find build -name "*.so" -exec cp {} dist/libjolt-jni-linux-armhf-sp.so \;
           ./gradlew clean
 
-          # --- ARM32 Dp -> VULKAN NO ---
+          # --- ARM32 Dp ---
           ./gradlew -Ptarget=Linux_ARM32hf -Pbt=Release -Pflavor=Dp -PuseVK=no build -x test -x checkstyleMain --console=plain
           find build -name "*.so" -exec cp {} dist/libjolt-jni-linux-armhf-dp.so \;
 
@@ -87,7 +88,6 @@ jobs:
           java-version: 21
       - uses: gradle/actions/setup-gradle@v3
       
-      # VULKAN FOR WINDOWS
       - uses: humbletim/setup-vulkan-sdk@v1.2.1
         with:
           vulkan-components: Vulkan-Headers, Vulkan-Loader
@@ -99,22 +99,19 @@ jobs:
         run: |
           mkdir -p dist
           
-          # x64 Sp -> VULKAN YES
+          # Windows x64 support Vulkan natively in GitHub Actions, so useVK=yes is fine
           ./gradlew -Ptarget=Windows64 -Pbt=Release -Pflavor=Sp -PuseVK=yes build -x test -x checkstyleMain --console=plain
           find build -name "*.dll" -exec cp {} dist/jolt-jni-windows-x64-sp.dll \;
           ./gradlew clean
 
-          # x64 Dp -> VULKAN YES
           ./gradlew -Ptarget=Windows64 -Pbt=Release -Pflavor=Dp -PuseVK=yes build -x test -x checkstyleMain --console=plain
           find build -name "*.dll" -exec cp {} dist/jolt-jni-windows-x64-dp.dll \;
           ./gradlew clean
 
-          # AVX2 Sp -> VULKAN YES
           ./gradlew -Ptarget=Windows64_avx2 -Pbt=Release -Pflavor=Sp -PuseVK=yes build -x test -x checkstyleMain --console=plain
           find build -name "*.dll" -exec cp {} dist/jolt-jni-windows-avx2-sp.dll \;
           ./gradlew clean
 
-          # AVX2 Dp -> VULKAN YES
           ./gradlew -Ptarget=Windows64_avx2 -Pbt=Release -Pflavor=Dp -PuseVK=yes build -x test -x checkstyleMain --console=plain
           find build -name "*.dll" -exec cp {} dist/jolt-jni-windows-avx2-dp.dll \;
 
@@ -137,24 +134,18 @@ jobs:
         run: |
           mkdir -p dist
           
-          # MacOS зазвичай не використовує Vulkan SDK напряму в цьому білді, тому без змін
-          
-          # ARM64 Sp
           ./gradlew -Ptarget=MacOSX_ARM64 -Pbt=Release -Pflavor=Sp build -x test -x checkstyleMain --console=plain
           find build -name "*.dylib" -exec cp {} dist/libjolt-jni-macos-arm64-sp.dylib \;
           ./gradlew clean
 
-          # ARM64 Dp
           ./gradlew -Ptarget=MacOSX_ARM64 -Pbt=Release -Pflavor=Dp build -x test -x checkstyleMain --console=plain
           find build -name "*.dylib" -exec cp {} dist/libjolt-jni-macos-arm64-dp.dylib \;
           ./gradlew clean
 
-          # Intel Sp
           ./gradlew -Ptarget=MacOSX64 -Pbt=Release -Pflavor=Sp build -x test -x checkstyleMain --console=plain
           find build -name "*.dylib" -exec cp {} dist/libjolt-jni-macos-intel-sp.dylib \;
           ./gradlew clean
 
-          # Intel Dp
           ./gradlew -Ptarget=MacOSX64 -Pbt=Release -Pflavor=Dp build -x test -x checkstyleMain --console=plain
           find build -name "*.dylib" -exec cp {} dist/libjolt-jni-macos-intel-dp.dylib \;
 
