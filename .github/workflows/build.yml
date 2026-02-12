@@ -56,18 +56,16 @@ jobs:
 
       - name: Locate and Rename Artifact
         run: |
-          echo "Listing build directory for debugging:"
-          ls -R build/
-          
-          # Шукаємо .so файл. Зазвичай install кладе його в build/install/.../lib/
-          LIB_PATH=$(find build -name "libjolt-jni.so" | head -n 1)
+          # Шукаємо libjoltjni.so (без дефіса)
+          LIB_PATH=$(find build -name "libjoltjni.so" | head -n 1)
           
           if [ -z "$LIB_PATH" ]; then
-            echo "Error: libjolt-jni.so not found!"
+            echo "Error: libjoltjni.so not found! Listing build dir:"
+            ls -R build/
             exit 1
           fi
           
-          echo "Found library at: $LIB_PATH"
+          echo "Found at: $LIB_PATH"
           mv "$LIB_PATH" "libjolt-jni-${{ matrix.target }}-${{ matrix.flavor }}.so"
 
       - uses: actions/upload-artifact@v4
@@ -132,11 +130,11 @@ jobs:
 
       - name: Locate and Rename Artifact
         run: |
-          ls -R build/
-          LIB_PATH=$(find build -name "libjolt-jni.so" | head -n 1)
+          LIB_PATH=$(find build -name "libjoltjni.so" | head -n 1)
           
           if [ -z "$LIB_PATH" ]; then
-            echo "Error: libjolt-jni.so not found!"
+            echo "Error: libjoltjni.so not found!"
+            ls -R build/
             exit 1
           fi
           
@@ -178,12 +176,12 @@ jobs:
 
       - name: Locate and Rename Artifact
         run: |
-          ls -R build/
-          # На Windows шукаємо DLL
-          LIB_PATH=$(find build -name "jolt-jni.dll" | head -n 1)
+          # На Windows шукаємо joltjni.dll (без дефіса)
+          LIB_PATH=$(find build -name "joltjni.dll" | head -n 1)
           
           if [ -z "$LIB_PATH" ]; then
-            echo "Error: jolt-jni.dll not found!"
+            echo "Error: joltjni.dll not found!"
+            ls -R build/
             exit 1
           fi
           
@@ -201,20 +199,20 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # Intel Mac (Використовуємо macos-12, бо macos-13 інколи недоступний)
+          # Intel Mac: Змінено на macos-13 (стандартний Intel runner)
           - target: MacOSX64
             flavor: Sp
-            os: macos-12
+            os: macos-13
           - target: MacOSX64
             flavor: Dp
-            os: macos-12
-          # Apple Silicon Mac (ARM)
+            os: macos-13
+          # Apple Silicon Mac: macos-15 (стандартний ARM runner)
           - target: MacOSX_ARM64
             flavor: Sp
-            os: macos-14
+            os: macos-15
           - target: MacOSX_ARM64
             flavor: Dp
-            os: macos-14
+            os: macos-15
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
@@ -230,12 +228,12 @@ jobs:
 
       - name: Locate and Rename Artifact
         run: |
-          ls -R build/
-          # На Mac шукаємо dylib
-          LIB_PATH=$(find build -name "libjolt-jni.dylib" | head -n 1)
+          # На Mac шукаємо libjoltjni.dylib (без дефіса)
+          LIB_PATH=$(find build -name "libjoltjni.dylib" | head -n 1)
           
           if [ -z "$LIB_PATH" ]; then
-            echo "Error: libjolt-jni.dylib not found!"
+            echo "Error: libjoltjni.dylib not found!"
+            ls -R build/
             exit 1
           fi
 
