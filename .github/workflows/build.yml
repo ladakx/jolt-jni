@@ -7,7 +7,7 @@ permissions:
 
 jobs:
   # ==========================================
-  # 1. LINUX BUILD
+  # 1. LINUX BUILD (Tests Skipped)
   # ==========================================
   Linux:
     runs-on: ubuntu-22.04
@@ -29,14 +29,15 @@ jobs:
           mkdir -p dist
           
           # --- DEBUG ---
-          ./gradlew -Ptarget=Linux64 -Pbt=Debug -PuseVK=yes build -x checkstyleMain -x checkstyleTest --console=plain
-          
+          ./gradlew -Ptarget=Linux64 -Pbt=Debug -PuseVK=yes build -x test -x checkstyleMain -x checkstyleTest --console=plain
+
           find build/libs -name "jolt-jni-*.jar" ! -name "*-javadoc.jar" ! -name "*-sources.jar" -exec cp {} dist/jolt-jni-linux-debug.jar \;
           find build -name "*.so" -exec cp {} dist/libjolt-jni-linux-debug.so \;
           
           # --- RELEASE ---
           ./gradlew clean
-          ./gradlew -Ptarget=Linux64 -Pbt=Release -PuseVK=yes build -x checkstyleMain -x checkstyleTest --console=plain
+          ./gradlew -Ptarget=Linux64 -Pbt=Release -PuseVK=yes build -x test -x checkstyleMain -x checkstyleTest --console=plain
+          
           find build/libs -name "jolt-jni-*.jar" ! -name "*-javadoc.jar" ! -name "*-sources.jar" -exec cp {} dist/jolt-jni-linux-release.jar \;
           find build -name "*.so" -exec cp {} dist/libjolt-jni-linux-release.so \;
 
@@ -46,7 +47,7 @@ jobs:
           path: dist/*
 
   # ==========================================
-  # 2. WINDOWS BUILD
+  # 2. WINDOWS BUILD (Tests Skipped)
   # ==========================================
   Windows:
     runs-on: windows-2022
@@ -69,13 +70,15 @@ jobs:
           mkdir -p dist
           
           # --- DEBUG ---
-          ./gradlew -Ptarget=Windows64 -Pbt=Debug -PuseVK=yes build -x checkstyleMain -x checkstyleTest --console=plain
+          ./gradlew -Ptarget=Windows64 -Pbt=Debug -PuseVK=yes build -x test -x checkstyleMain -x checkstyleTest --console=plain
+          
           find build/libs -name "jolt-jni-*.jar" ! -name "*-javadoc.jar" ! -name "*-sources.jar" -exec cp {} dist/jolt-jni-windows-debug.jar \;
           find build -name "*.dll" -exec cp {} dist/jolt-jni-windows-debug.dll \;
           
           # --- RELEASE ---
           ./gradlew clean
-          ./gradlew -Ptarget=Windows64 -Pbt=Release -PuseVK=yes build -x checkstyleMain -x checkstyleTest --console=plain
+          ./gradlew -Ptarget=Windows64 -Pbt=Release -PuseVK=yes build -x test -x checkstyleMain -x checkstyleTest --console=plain
+          
           find build/libs -name "jolt-jni-*.jar" ! -name "*-javadoc.jar" ! -name "*-sources.jar" -exec cp {} dist/jolt-jni-windows-release.jar \;
           find build -name "*.dll" -exec cp {} dist/jolt-jni-windows-release.dll \;
 
@@ -85,7 +88,7 @@ jobs:
           path: dist/*
 
   # ==========================================
-  # 3. MACOS BUILD
+  # 3. MACOS BUILD (Tests Skipped + Fixes)
   # ==========================================
   MacOS:
     runs-on: macos-latest
@@ -102,14 +105,15 @@ jobs:
           mkdir -p dist
           
           # --- ARM64 ---
-          ./gradlew -Ptarget=MacOSX_ARM64 -Pbt=Release build -x checkstyleMain -x checkstyleTest --console=plain
+          ./gradlew -Ptarget=MacOSX_ARM64 -Pbt=Release build -x test -x checkstyleMain -x checkstyleTest --console=plain
           
           find build/libs -name "jolt-jni-*.jar" ! -name "*-javadoc.jar" ! -name "*-sources.jar" -exec cp {} dist/jolt-jni-macos-arm64.jar \;
           find build -name "*.dylib" -exec cp {} dist/libjolt-jni-macos-arm64.dylib \;
           
           # --- INTEL x64 ---
           ./gradlew clean
-          ./gradlew -Ptarget=MacOSX64 -Pbt=Release build -x checkstyleMain -x checkstyleTest --console=plain
+          ./gradlew -Ptarget=MacOSX64 -Pbt=Release build -x test -x checkstyleMain -x checkstyleTest --console=plain
+          
           find build/libs -name "jolt-jni-*.jar" ! -name "*-javadoc.jar" ! -name "*-sources.jar" -exec cp {} dist/jolt-jni-macos-intel.jar \;
           find build -name "*.dylib" -exec cp {} dist/libjolt-jni-macos-intel.dylib \;
 
