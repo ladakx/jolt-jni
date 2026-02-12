@@ -1,4 +1,4 @@
-name: Build ALL Platforms (12 Variants)
+name: Build EVERYTHING (All Platforms, Sp/Dp)
 
 on: [push, workflow_dispatch]
 
@@ -7,7 +7,7 @@ permissions:
 
 jobs:
   # ==========================================
-  # 1. LINUX (Standard + FMA + ARM64 + ARM32)
+  # 1. LINUX (8 Variants: x64, FMA, ARM64, ARM32 * Sp/Dp)
   # ==========================================
   Linux:
     runs-on: ubuntu-22.04
@@ -18,6 +18,7 @@ jobs:
           distribution: 'zulu'
           java-version: 21
       
+      # Встановлення крос-компіляторів
       - name: Install Cross-Compilers
         run: |
           sudo apt-get update
@@ -34,26 +35,37 @@ jobs:
         run: |
           mkdir -p dist
           
-          # --- 1. Linux x64 (Standard) ---
-          ./gradlew -Ptarget=Linux64 -Pbt=Release -Pflavor=Sp -PuseVK=yes build -x test -x checkstyleMain --console=plain
-          find build -name "*.so" -exec cp {} dist/libjolt-jni-linux-x64-sp.so \;
-          # Зберігаємо ОДИН універсальний JAR
-          find build/libs -name "jolt-jni-*.jar" ! -name "*-javadoc.jar" ! -name "*-sources.jar" -exec cp {} dist/jolt-jni-universal.jar \;
-          ./gradlew clean
+          # --- Helper Function for Clean Build ---
+          build_linux() {
+            TARGET=$1
+            FLAVOR=$2
+            SUFFIX=$3
+            echo "Building $TARGET $FLAVOR..."
+            ./gradlew -Ptarget=$TARGET -Pbt=Release -Pflavor=$FLAVOR -PuseVK=yes build -x test -x checkstyleMain --console=plain
+            find build -name "*.so" -exec cp {} dist/libjolt-jni-linux-$SUFFIX.so \;
+            # Save JAR only once (from x64 Sp)
+            if [ "$SUFFIX" == "x64-sp" ]; then
+               find build/libs -name "jolt-jni-*.jar" ! -name "*-javadoc.jar" ! -name "*-sources.jar" -exec cp {} dist/jolt-jni-universal-api.jar \;
+            fi
+            ./gradlew clean
+          }
 
-          # --- 2. Linux x64 (FMA - Optimized) ---
-          ./gradlew -Ptarget=Linux64_fma -Pbt=Release -Pflavor=Sp -PuseVK=yes build -x test -x checkstyleMain --console=plain
-          find build -name "*.so" -exec cp {} dist/libjolt-jni-linux-x64-fma-sp.so \;
-          ./gradlew clean
-
-          # --- 3. Linux ARM64 (AARCH64) ---
-          ./gradlew -Ptarget=Linux_ARM64 -Pbt=Release -Pflavor=Sp build -x test -x checkstyleMain --console=plain
-          find build -name "*.so" -exec cp {} dist/libjolt-jni-linux-arm64-sp.so \;
-          ./gradlew clean
-
-          # --- 4. Linux ARM32 (armhf) ---
-          ./gradlew -Ptarget=Linux_ARM32hf -Pbt=Release -Pflavor=Sp build -x test -x checkstyleMain --console=plain
-          find build -name "*.so" -exec cp {} dist/libjolt-jni-linux-armhf-sp.so \;
+          # --- EXECUTE BUILDS ---
+          # 1. Standard x64
+          build_linux "Linux64" "Sp" "x64-sp"
+          build_linux "Linux64" "Dp" "x64-dp"
+          
+          # 2. FMA x64
+          build_linux "Linux64_fma" "Sp" "x64-fma-sp"
+          build_linux "Linux64_fma" "Dp" "x64-fma-dp"
+          
+          # 3. ARM64 (AARCH64)
+          build_linux "Linux_ARM64" "Sp" "arm64-sp"
+          build_linux "Linux_ARM64" "Dp" "arm64-dp"
+          
+          # 4. ARM32 (ARMhf)
+          build_linux "Linux_ARM32hf" "Sp" "armhf-sp"
+          build_linux "Linux_ARM32hf" "Dp" "armhf-dp"
 
       - uses: actions/upload-artifact@v4
         with:
@@ -61,7 +73,7 @@ jobs:
           path: dist/*
 
   # ==========================================
-  # 2. WINDOWS (Standard + AVX2)
+  # 2. WINDOWS (4 Variants: x64, AVX2 * Sp/Dp)
   # ==========================================
   Windows:
     runs-on: windows-2022
@@ -83,14 +95,23 @@ jobs:
         run: |
           mkdir -p dist
           
-          # --- 1. Windows x64 (Standard) ---
-          ./gradlew -Ptarget=Windows64 -Pbt=Release -Pflavor=Sp -PuseVK=yes build -x test -x checkstyleMain --console=plain
-          find build -name "*.dll" -exec cp {} dist/jolt-jni-windows-x64-sp.dll \;
-          ./gradlew clean
+          build_win() {
+            TARGET=$1
+            FLAVOR=$2
+            SUFFIX=$3
+            echo "Building $TARGET $FLAVOR..."
+            ./gradlew -Ptarget=$TARGET -Pbt=Release -Pflavor=$FLAVOR -PuseVK=yes build -x test -x checkstyleMain --console=plain
+            find build -name "*.dll" -exec cp {} dist/jolt-jni-windows-$SUFFIX.dll \;
+            ./gradlew clean
+          }
 
-          # --- 2. Windows x64 (AVX2 - Optimized) ---
-          ./gradlew -Ptarget=Windows64_avx2 -Pbt=Release -Pflavor=Sp -PuseVK=yes build -x test -x checkstyleMain --console=plain
-          find build -name "*.dll" -exec cp {} dist/jolt-jni-windows-avx2-sp.dll \;
+          # 1. Standard x64
+          build_win "Windows64" "Sp" "x64-sp"
+          build_win "Windows64" "Dp" "x64-dp"
+
+          # 2. AVX2
+          build_win "Windows64_avx2" "Sp" "avx2-sp"
+          build_win "Windows64_avx2" "Dp" "avx2-dp"
 
       - uses: actions/upload-artifact@v4
         with:
@@ -98,7 +119,7 @@ jobs:
           path: dist/*
 
   # ==========================================
-  # 3. MACOS (ARM64 + Intel)
+  # 3. MACOS (4 Variants: ARM64, Intel * Sp/Dp)
   # ==========================================
   MacOS:
     runs-on: macos-latest
@@ -114,14 +135,23 @@ jobs:
         run: |
           mkdir -p dist
           
-          # --- 1. ARM64 (Apple Silicon) ---
-          ./gradlew -Ptarget=MacOSX_ARM64 -Pbt=Release -Pflavor=Sp build -x test -x checkstyleMain --console=plain
-          find build -name "*.dylib" -exec cp {} dist/libjolt-jni-macos-arm64-sp.dylib \;
-          ./gradlew clean
+          build_mac() {
+            TARGET=$1
+            FLAVOR=$2
+            SUFFIX=$3
+            echo "Building $TARGET $FLAVOR..."
+            ./gradlew -Ptarget=$TARGET -Pbt=Release -Pflavor=$FLAVOR build -x test -x checkstyleMain --console=plain
+            find build -name "*.dylib" -exec cp {} dist/libjolt-jni-macos-$SUFFIX.dylib \;
+            ./gradlew clean
+          }
 
-          # --- 2. Intel x64 ---
-          ./gradlew -Ptarget=MacOSX64 -Pbt=Release -Pflavor=Sp build -x test -x checkstyleMain --console=plain
-          find build -name "*.dylib" -exec cp {} dist/libjolt-jni-macos-intel-sp.dylib \;
+          # 1. ARM64 (Apple Silicon)
+          build_mac "MacOSX_ARM64" "Sp" "arm64-sp"
+          build_mac "MacOSX_ARM64" "Dp" "arm64-dp"
+
+          # 2. Intel x64
+          build_mac "MacOSX64" "Sp" "intel-sp"
+          build_mac "MacOSX64" "Dp" "intel-dp"
 
       - uses: actions/upload-artifact@v4
         with:
@@ -129,7 +159,7 @@ jobs:
           path: dist/*
 
   # ==========================================
-  # 4. ANDROID (All 4 ABIs)
+  # 4. ANDROID (8 Variants extracted from AARs)
   # ==========================================
   Android:
     runs-on: ubuntu-22.04
@@ -144,20 +174,35 @@ jobs:
       - name: Prepare Sources
         run: ./gradlew classes unpackJoltSource unpackTestFramework unpackVhacdSource --console=plain
 
-      - name: Build Android
-        run: ./gradlew --build-file=android.gradle -Pflavor=Sp -Pbt=Release assemble --console=plain
-
-      - name: Extract Android Libs
+      - name: Build Android Sp & Dp
         run: |
           mkdir -p dist
-          find build/libs -name "*.aar" -exec cp {} dist/jolt-jni-android.aar \;
           
-          unzip dist/jolt-jni-android.aar -d temp_android
+          # --- SP BUILD ---
+          echo "Building Android Sp..."
+          ./gradlew --build-file=android.gradle -Pflavor=Sp -Pbt=Release assemble --console=plain
           
-          cp temp_android/jni/arm64-v8a/libjolt-jni.so dist/libjolt-jni-android-arm64-v8a.so
-          cp temp_android/jni/armeabi-v7a/libjolt-jni.so dist/libjolt-jni-android-armeabi-v7a.so
-          cp temp_android/jni/x86/libjolt-jni.so dist/libjolt-jni-android-x86.so
-          cp temp_android/jni/x86_64/libjolt-jni.so dist/libjolt-jni-android-x86_64.so
+          # Extract Sp libs
+          find build/libs -name "*.aar" -exec cp {} jolt-android-sp.zip \;
+          unzip -o jolt-android-sp.zip -d temp_sp
+          cp temp_sp/jni/arm64-v8a/libjolt-jni.so dist/libjolt-jni-android-arm64-v8a-sp.so
+          cp temp_sp/jni/armeabi-v7a/libjolt-jni.so dist/libjolt-jni-android-armeabi-v7a-sp.so
+          cp temp_sp/jni/x86/libjolt-jni.so dist/libjolt-jni-android-x86-sp.so
+          cp temp_sp/jni/x86_64/libjolt-jni.so dist/libjolt-jni-android-x86_64-sp.so
+          
+          ./gradlew clean
+
+          # --- DP BUILD ---
+          echo "Building Android Dp..."
+          ./gradlew --build-file=android.gradle -Pflavor=Dp -Pbt=Release assemble --console=plain
+          
+          # Extract Dp libs
+          find build/libs -name "*.aar" -exec cp {} jolt-android-dp.zip \;
+          unzip -o jolt-android-dp.zip -d temp_dp
+          cp temp_dp/jni/arm64-v8a/libjolt-jni.so dist/libjolt-jni-android-arm64-v8a-dp.so
+          cp temp_dp/jni/armeabi-v7a/libjolt-jni.so dist/libjolt-jni-android-armeabi-v7a-dp.so
+          cp temp_dp/jni/x86/libjolt-jni.so dist/libjolt-jni-android-x86-dp.so
+          cp temp_dp/jni/x86_64/libjolt-jni.so dist/libjolt-jni-android-x86_64-dp.so
 
       - uses: actions/upload-artifact@v4
         with:
@@ -165,7 +210,7 @@ jobs:
           path: dist/*
 
   # ==========================================
-  # 5. PUBLISH TO RELEASES
+  # 5. PUBLISH
   # ==========================================
   Publish:
     needs: [Linux, Windows, MacOS, Android]
@@ -187,7 +232,7 @@ jobs:
       - name: Upload to Release
         uses: softprops/action-gh-release@v1
         with:
-          name: Latest Nightly Build
+          name: Latest Jolt-JNI Ultimate Build
           tag_name: nightly
           prerelease: true
           files: all_files/*
