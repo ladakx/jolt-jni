@@ -836,3 +836,38 @@ JNIEXPORT void JNICALL Java_com_github_stephengold_joltjni_Body_setUserData
     Body * const pBody = reinterpret_cast<Body *> (bodyVa);
     pBody->SetUserData(value);
 }
+
+// Fork Code
+// ==============
+
+/*
+ * Class:     com_github_stephengold_joltjni_Body
+ * Method:    getBatchTransforms
+ * Signature: (JJ)V
+ */
+JNIEXPORT void JNICALL Java_com_github_stephengold_joltjni_Body_getBatchTransforms
+  (JNIEnv *env, jclass clazz, jlongArray jBodyIds, jint count, jobject jByteBuffer) {
+    JPH::BodyInterface &bodyInterface = GetPhysicsSystem()->GetBodyInterface();
+
+    float* buffer = (float*)env->GetDirectBufferAddress(jByteBuffer);
+    jlong* bodyIds = env->GetLongArrayElements(jBodyIds, NULL);
+
+    int floatIndex = 0;
+    for (int i = 0; i < count; i++) {
+        JPH::BodyID bodyID(bodyIds[i]);
+        
+        JPH::RVec3 pos;
+        JPH::Quat rot;
+        bodyInterface.GetPositionAndRotation(bodyID, pos, rot);
+
+        buffer[floatIndex++] = (float)pos.GetX();
+        buffer[floatIndex++] = (float)pos.GetY();
+        buffer[floatIndex++] = (float)pos.GetZ();
+        
+        buffer[floatIndex++] = rot.GetX();
+        buffer[floatIndex++] = rot.GetY();
+        buffer[floatIndex++] = rot.GetZ();
+        buffer[floatIndex++] = rot.GetW();
+    }
+    env->ReleaseLongArrayElements(jBodyIds, bodyIds, JNI_ABORT);
+}

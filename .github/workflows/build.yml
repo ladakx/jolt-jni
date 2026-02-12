@@ -27,14 +27,17 @@ jobs:
       - name: Build & Collect
         run: |
           mkdir -p dist
-          # Debug
+          
+          # --- DEBUG ---
           ./gradlew -Ptarget=Linux64 -Pbt=Debug -PuseVK=yes build -x checkstyleMain -x checkstyleTest --console=plain
-          cp build/libs/*.jar dist/jolt-jni-linux-debug.jar
+          
+          find build/libs -name "jolt-jni-*.jar" ! -name "*-javadoc.jar" ! -name "*-sources.jar" -exec cp {} dist/jolt-jni-linux-debug.jar \;
           find build -name "*.so" -exec cp {} dist/libjolt-jni-linux-debug.so \;
-          # Release
+          
+          # --- RELEASE ---
           ./gradlew clean
           ./gradlew -Ptarget=Linux64 -Pbt=Release -PuseVK=yes build -x checkstyleMain -x checkstyleTest --console=plain
-          cp build/libs/*.jar dist/jolt-jni-linux-release.jar
+          find build/libs -name "jolt-jni-*.jar" ! -name "*-javadoc.jar" ! -name "*-sources.jar" -exec cp {} dist/jolt-jni-linux-release.jar \;
           find build -name "*.so" -exec cp {} dist/libjolt-jni-linux-release.so \;
 
       - uses: actions/upload-artifact@v4
@@ -64,14 +67,16 @@ jobs:
         shell: bash
         run: |
           mkdir -p dist
-          # Debug
+          
+          # --- DEBUG ---
           ./gradlew -Ptarget=Windows64 -Pbt=Debug -PuseVK=yes build -x checkstyleMain -x checkstyleTest --console=plain
-          cp build/libs/*.jar dist/jolt-jni-windows-debug.jar
+          find build/libs -name "jolt-jni-*.jar" ! -name "*-javadoc.jar" ! -name "*-sources.jar" -exec cp {} dist/jolt-jni-windows-debug.jar \;
           find build -name "*.dll" -exec cp {} dist/jolt-jni-windows-debug.dll \;
-          # Release
+          
+          # --- RELEASE ---
           ./gradlew clean
           ./gradlew -Ptarget=Windows64 -Pbt=Release -PuseVK=yes build -x checkstyleMain -x checkstyleTest --console=plain
-          cp build/libs/*.jar dist/jolt-jni-windows-release.jar
+          find build/libs -name "jolt-jni-*.jar" ! -name "*-javadoc.jar" ! -name "*-sources.jar" -exec cp {} dist/jolt-jni-windows-release.jar \;
           find build -name "*.dll" -exec cp {} dist/jolt-jni-windows-release.dll \;
 
       - uses: actions/upload-artifact@v4
@@ -95,14 +100,17 @@ jobs:
       - name: Build & Collect
         run: |
           mkdir -p dist
-          # ARM64
+          
+          # --- ARM64 ---
           ./gradlew -Ptarget=MacOSX_ARM64 -Pbt=Release build -x checkstyleMain -x checkstyleTest --console=plain
-          cp build/libs/*.jar dist/jolt-jni-macos-arm64.jar
+          
+          find build/libs -name "jolt-jni-*.jar" ! -name "*-javadoc.jar" ! -name "*-sources.jar" -exec cp {} dist/jolt-jni-macos-arm64.jar \;
           find build -name "*.dylib" -exec cp {} dist/libjolt-jni-macos-arm64.dylib \;
-          # Intel
+          
+          # --- INTEL x64 ---
           ./gradlew clean
           ./gradlew -Ptarget=MacOSX64 -Pbt=Release build -x checkstyleMain -x checkstyleTest --console=plain
-          cp build/libs/*.jar dist/jolt-jni-macos-intel.jar
+          find build/libs -name "jolt-jni-*.jar" ! -name "*-javadoc.jar" ! -name "*-sources.jar" -exec cp {} dist/jolt-jni-macos-intel.jar \;
           find build -name "*.dylib" -exec cp {} dist/libjolt-jni-macos-intel.dylib \;
 
       - uses: actions/upload-artifact@v4
@@ -111,7 +119,7 @@ jobs:
           path: dist/*
 
   # ==========================================
-  # 4. PUBLISH TO RELEASES (THE MAGIC PART)
+  # 4. PUBLISH TO RELEASES
   # ==========================================
   Publish:
     needs: [Linux, Windows, MacOS]

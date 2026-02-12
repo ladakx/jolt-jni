@@ -1282,4 +1282,7 @@ public class Body extends NonCopyable implements ConstBody {
     native private static void setRestitution(long bodyVa, float restitution);
 
     native private static void setUserData(long bodyVa, long value);
+
+    // Fork code
+    public static native void getBatchTransforms(long[] bodyIds, int count, java.nio.ByteBuffer buffer);
 }
