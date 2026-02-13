@@ -14,7 +14,7 @@ plugins {
     alias(libs.plugins.download) // to retrieve files from URLs
 }
 
-// $artifact, $jjVersion, $useMTL, and $useVK are set in
+// $artifact, $jjVersion, and $useMTL are set in
 // the gradle.properties file or by -P options on the Gradle command line.
 
 ext {
@@ -40,17 +40,6 @@ tasks.withType(ObjectiveCppCompile).configureEach {
 }
 
 String javaHome = org.gradle.internal.jvm.Jvm.current().javaHome.absolutePath
-
-// mechanism to override the VULKAN_SDK environment variable:
-String vulkanSdk
-if (project.hasProperty('useVK')) {
-    if (project.hasProperty('vulkanSdk')) {
-        vulkanSdk = project.getProperty('vulkanSdk')
-    } else {
-        vulkanSdk = System.getenv('VULKAN_SDK') // read the environment variable
-    }
-    println 'vulkanSdk = ' + vulkanSdk
-}
 
 model {
     buildTypes {
@@ -257,12 +246,6 @@ model {
                         cppCompiler.args '/Ob3'
                     }
 
-                    if (project.hasProperty('useVK')) {
-                        cppCompiler.args "/I$vulkanSdk/Include"
-                        cppCompiler.define 'JPH_USE_VK'
-                        linker.args "$vulkanSdk/Lib/vulkan-1.lib"
-                    }
-
                 } else { // toolChain in Clang or Gcc
                     //cppCompiler.args '-v' // to log compiler details
                     //linker.args '-v' // to log linker details
@@ -310,12 +293,6 @@ model {
                         cppCompiler.args '-I', "$javaHome/include/win32"
                     } else {
                         buildable = false
-                    }
-
-                    if (project.hasProperty('useVK')) {
-                        cppCompiler.args '-I', "$vulkanSdk/include"
-                        cppCompiler.define 'JPH_USE_VK'
-                        linker.args '-L', "$vulkanSdk/lib", '-lvulkan'
                     }
                 }
 
@@ -471,18 +448,12 @@ tasks.withType(JavaExec).configureEach { // Java runtime options:
     classpath sourceSets.test.runtimeClasspath
     dependsOn('assemble')
     enableAssertions = true
-    if (project.hasProperty('useVK')) {
-        environment 'VULKAN_SDK', vulkanSdk
-    }
     if (enableNativeAccess) {
         jvmArgs('--enable-native-access=ALL-UNNAMED') // suppress System::load() warning
     }
 }
 tasks.withType(Test).configureEach {
     dependsOn('unpackJoltAssets')
-    if (project.hasProperty('useVK')) {
-        environment 'VULKAN_SDK', vulkanSdk
-    }
     if (enableNativeAccess) {
         jvmArgs('--enable-native-access=ALL-UNNAMED') // suppress System::load() warning
     }
@@ -519,9 +490,7 @@ jar {
     if (!project.hasProperty('useMTL')) {
         exclude('**/*.air')
     }
-    if (!project.hasProperty('useVK')) {
-        exclude('**/*.spv')
-    }
+    exclude('**/*.spv')
     manifest {
         attributes 'Created-By': "${JavaVersion.current()} (${System.getProperty("java.vendor")})"
     }
