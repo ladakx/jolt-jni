@@ -51,7 +51,7 @@ jobs:
       
       - name: Build Native Lib (Install)
         run: |
-          ./gradlew -Pbt=Release -Pflavor=${{ matrix.flavor }} -Ptarget=${{ matrix.target }} -PuseVK=yes \
+          ./gradlew -Pbt=Release -Pflavor=${{ matrix.flavor }} -Ptarget=${{ matrix.target }} -PuseVK=no \
             -x checkstyleMain -x checkstyleTest -x test -x javadoc install --console=plain
 
       - name: Locate and Rename Artifact
@@ -171,12 +171,11 @@ jobs:
       
       - name: Build Native Lib (Install)
         run: |
-          ./gradlew -Pbt=Release -Pflavor=${{ matrix.flavor }} -Ptarget=${{ matrix.target }} -PuseVK=yes \
+          ./gradlew -Pbt=Release -Pflavor=${{ matrix.flavor }} -Ptarget=${{ matrix.target }} -PuseVK=no \
             -x checkstyleMain -x checkstyleTest -x test -x javadoc install --console=plain
 
       - name: Locate and Rename Artifact
         run: |
-          # На Windows ім'я зазвичай joltjni.dll (без lib на початку і без дефіса)
           LIB_PATH=$(find build -name "joltjni.dll" | head -n 1)
           
           if [ -z "$LIB_PATH" ]; then
