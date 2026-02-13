@@ -30,8 +30,10 @@ import com.github.stephengold.joltjni.readonly.ConstShape;
 import com.github.stephengold.joltjni.readonly.QuatArg;
 import com.github.stephengold.joltjni.readonly.RVec3Arg;
 import com.github.stephengold.joltjni.readonly.Vec3Arg;
+import java.nio.ByteBuffer;
 import java.nio.DoubleBuffer;
 import java.nio.FloatBuffer;
+import java.util.Objects;
 
 /**
  * An object with mass, position, and shape that can be added to a
@@ -1284,5 +1286,24 @@ public class Body extends NonCopyable implements ConstBody {
     native private static void setUserData(long bodyVa, long value);
 
     // Fork code
-    public static native void getBatchTransforms(long bodyInterfaceAddress, long[] bodyIds, int count, java.nio.ByteBuffer buffer);
+    public static int getBatchTransforms(
+            long bodyInterfaceAddress, long[] bodyIds, int count,
+            ByteBuffer buffer) {
+        Objects.requireNonNull(bodyIds, "bodyIds");
+        Objects.requireNonNull(buffer, "buffer");
+
+        if (count < 0 || count > bodyIds.length) {
+            throw new IllegalArgumentException("count");
+        }
+        if (!buffer.isDirect()) {
+            throw new IllegalArgumentException("buffer");
+        }
+
+        return getBatchTransformsNative(
+                bodyInterfaceAddress, bodyIds, count, buffer);
+    }
+
+    native private static int getBatchTransformsNative(
+            long bodyInterfaceAddress, long[] bodyIds, int count,
+            ByteBuffer buffer);
 }

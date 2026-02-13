@@ -845,33 +845,40 @@ JNIEXPORT void JNICALL Java_com_github_stephengold_joltjni_Body_setUserData
 
 /*
  * Class:     com_github_stephengold_joltjni_Body
- * Method:    getBatchTransforms
- * Signature: (JJ)V
+ * Method:    getBatchTransformsNative
+ * Signature: (J[JILjava/nio/ByteBuffer;)I
  */
-JNIEXPORT void JNICALL Java_com_github_stephengold_joltjni_Body_getBatchTransforms
-  (JNIEnv *env, jclass clazz, jlong jBodyInterfacePtr, jlongArray jBodyIds, jint count, jobject jByteBuffer) {
-    JPH::BodyInterface* bodyInterface = (JPH::BodyInterface*) jBodyInterfacePtr;
+JNIEXPORT jint JNICALL Java_com_github_stephengold_joltjni_Body_getBatchTransformsNative
+  (JNIEnv *env, jclass, jlong bodyInterfaceVa, jlongArray jBodyIds, jint count,
+  jobject jByteBuffer) {
+    BodyInterface * const pBodyInterface
+            = reinterpret_cast<BodyInterface *> (bodyInterfaceVa);
+    float * const pBuffer = reinterpret_cast<float *> (
+            env->GetDirectBufferAddress(jByteBuffer));
+    jlong * const pBodyIds = env->GetLongArrayElements(jBodyIds, nullptr);
 
-    float* buffer = (float*)env->GetDirectBufferAddress(jByteBuffer);
-    jlong* bodyIds = env->GetLongArrayElements(jBodyIds, NULL);
-
+    jint numActive = 0;
     int floatIndex = 0;
-    for (int i = 0; i < count; i++) {
-        JPH::BodyID bodyID(bodyIds[i]);
-        
-        JPH::RVec3 pos;
-        JPH::Quat rot;
-        
-        bodyInterface->GetPositionAndRotation(bodyID, pos, rot);
+    for (jint i = 0; i < count; ++i) {
+        const BodyID bodyId((uint32) pBodyIds[i]);
+        if (!pBodyInterface->IsActive(bodyId)) {
+            continue;
+        }
 
-        buffer[floatIndex++] = (float)pos.GetX();
-        buffer[floatIndex++] = (float)pos.GetY();
-        buffer[floatIndex++] = (float)pos.GetZ();
-        
-        buffer[floatIndex++] = rot.GetX();
-        buffer[floatIndex++] = rot.GetY();
-        buffer[floatIndex++] = rot.GetZ();
-        buffer[floatIndex++] = rot.GetW();
+        RVec3 position;
+        Quat rotation;
+        pBodyInterface->GetPositionAndRotation(bodyId, position, rotation);
+
+        pBuffer[floatIndex++] = (float) position.GetX();
+        pBuffer[floatIndex++] = (float) position.GetY();
+        pBuffer[floatIndex++] = (float) position.GetZ();
+        pBuffer[floatIndex++] = rotation.GetX();
+        pBuffer[floatIndex++] = rotation.GetY();
+        pBuffer[floatIndex++] = rotation.GetZ();
+        pBuffer[floatIndex++] = rotation.GetW();
+        ++numActive;
     }
-    env->ReleaseLongArrayElements(jBodyIds, bodyIds, JNI_ABORT);
+
+    env->ReleaseLongArrayElements(jBodyIds, pBodyIds, JNI_ABORT);
+    return numActive;
 }
