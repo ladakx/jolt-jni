@@ -1,4 +1,4 @@
-# Jolt JNI
+# Jolt JNI 
 
 [The Jolt-JNI Project][project] provides
 [JVM] bindings for [Jolt Physics][jolt]
@@ -8,6 +8,9 @@ to facilitate physics simulation in JVM languages such as [Java] and [Kotlin].
 Source code (in Java and C++) is provided under
 [an MIT license][license].
 
+## Fork notice:
+This fork introduces performance-oriented modifications, including
+batched transform retrieval to reduce JNI overhead and removal of the Vulkan dependency to simplify server-side deployment.
 
 <a name="toc"></a>
 
